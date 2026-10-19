@@ -1,7 +1,8 @@
 pypdf
 requests
 python-dotenv
-fastembed
 qdrant-client
 langchain-qdrant
 langchain-text-splitters
+langchain-huggingface
+sentence-transformers
