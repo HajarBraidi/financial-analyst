@@ -1,0 +1,7 @@
+pypdf
+requests
+python-dotenv
+fastembed
+qdrant-client
+langchain-qdrant
+langchain-text-splitters
