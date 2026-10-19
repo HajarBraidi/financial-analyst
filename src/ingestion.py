@@ -1,6 +1,7 @@
 """Étape A : lire la liste des documents, lire les PDF, nettoyer et découper."""
 import io
 import json
+import logging
 import re
 
 import requests
@@ -8,19 +9,47 @@ from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pypdf import PdfReader
 
-from config import BASE_URL, CHUNK_OVERLAP, CHUNK_SIZE, ENTREPRISES, METADATA_URL
+# Cache les avertissements techniques de pypdf sur certains PDF mal formés (sans gravité)
+logging.getLogger("pypdf").setLevel(logging.ERROR)
+
+from config import (
+    ANNEE_MIN_10K, BASE_URL, CHUNK_OVERLAP, CHUNK_SIZE, ENTREPRISES, METADATA_URL,
+    QUESTIONS_URL,
+)
 
 
 def charger_liste_documents(tout=False):
     """Lit le fichier officiel de FinanceBench qui décrit les 361 documents :
     nom, entreprise, secteur, type (10k, 10q, 8k, Earnings...) et année.
-    Si tout=True, on garde les 361 documents, sinon seulement ENTREPRISES."""
+    Si tout=True, on garde les 40 entreprises, sinon seulement ENTREPRISES.
+    ANNEE_MIN_10K (config.py) enlève ensuite les 10-K anciens sans questions."""
     reponse = requests.get(METADATA_URL, timeout=60)
     reponse.raise_for_status()
     documents = [json.loads(ligne) for ligne in reponse.text.splitlines() if ligne.strip()]
     if ENTREPRISES and not tout:  # on garde seulement les entreprises choisies dans config.py
         documents = [d for d in documents if d["company"] in ENTREPRISES]
+    if ANNEE_MIN_10K:  # on enlève les 10-K anciens, sauf s'ils ont des questions
+        avec_questions = documents_avec_questions()
+        documents = [
+            d for d in documents
+            if not d["doc_type"].lower().startswith("10k")
+            or d["doc_period"] >= ANNEE_MIN_10K
+            or d["doc_name"] in avec_questions
+        ]
     return documents
+
+
+def documents_avec_questions():
+    """Renvoie les noms des documents qui ont au moins une question FinanceBench."""
+    reponse = requests.get(QUESTIONS_URL, timeout=60)
+    reponse.raise_for_status()
+    return {json.loads(ligne)["doc_name"] for ligne in reponse.text.splitlines() if ligne.strip()}
+
+
+def preparer_document(info):
+    """Lit un PDF et le découpe : renvoie (info, chunks).
+    Utilisé en parallèle par indexing.py pendant que la carte graphique calcule."""
+    return info, decouper(charger_pages(info))
 
 
 def nettoyer(texte):
