@@ -6,3 +6,5 @@ langchain-qdrant
 langchain-text-splitters
 langchain-huggingface
 sentence-transformers
+langchain-google-genai
+pydantic
