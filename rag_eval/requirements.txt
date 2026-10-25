@@ -1,0 +1,19 @@
+# --- copied from colleagues' pip freeze ---
+langchain
+langchain-core 
+langchain-community 
+langchain-google-genai
+langchain-qdrant
+langchain-huggingface
+sentence-transformers
+qdrant-client
+torch          # CPU or CUDA build, same as colleagues
+transformers
+
+# --- evaluation-only ---
+ragas==0.2.10             # verify compatible; 0.2.x line
+datasets>=2.18
+pandas>=2.0
+tqdm
+python-dotenv
+matplotlib
